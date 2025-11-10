@@ -144,11 +144,38 @@ export class AdminUserComponent implements OnInit {
     this.editAttribute = "";
   }
 
-  public sortByID: NzTableSortFn<User> = (a: User, b: User) => b.uid - a.uid;
-  public sortByName: NzTableSortFn<User> = (a: User, b: User) => (b.name || "").localeCompare(a.name);
-  public sortByEmail: NzTableSortFn<User> = (a: User, b: User) => (b.email || "").localeCompare(a.email);
-  public sortByComment: NzTableSortFn<User> = (a: User, b: User) => (b.comment || "").localeCompare(a.comment);
-  public sortByRole: NzTableSortFn<User> = (a: User, b: User) => b.role.localeCompare(a.role);
+  private tie(a: User, b: User): number {
+    return b.uid - a.uid;
+  }
+
+  public sortByID: NzTableSortFn<User> = (a, b) => (a.uid - b.uid);
+
+  public sortByName: NzTableSortFn<User> = (a, b) => {
+    const c = (a.name || "").localeCompare(b.name || "");
+    return c !== 0 ? c : this.tie(a, b);
+  };
+
+  public sortByEmail: NzTableSortFn<User> = (a, b) => {
+    const c = (a.email || "").localeCompare(b.email || "");
+    return c !== 0 ? c : this.tie(a, b);
+  };
+
+  public sortByComment: NzTableSortFn<User> = (a, b) => {
+    const c = (a.comment || "").localeCompare(b.comment || "");
+    return c !== 0 ? c : this.tie(a, b);
+  };
+
+  public sortByRole: NzTableSortFn<User> = (a, b) => {
+    const c = (a.role || "").localeCompare(b.role || "");
+    return c !== 0 ? c : (a.uid - b.uid);
+  };
+
+  public sortByActive: NzTableSortFn<User> = (a, b) => {
+    const aActive = this.isUserActive(a) ? 1 : 0;
+    const bActive = this.isUserActive(b) ? 1 : 0;
+    const c = aActive - bActive;
+    return c !== 0 ? c : (a.uid - b.uid);
+  };
 
   reset(): void {
     this.nameSearchValue = "";
@@ -203,14 +230,6 @@ export class AdminUserComponent implements OnInit {
     }
     return user.accountCreation * 1000;
   }
-
-  sortByActive: NzTableSortFn<User> = (a: User, b: User) => {
-    const aActive = this.isUserActive(a);
-    const bActive = this.isUserActive(b);
-
-    if (aActive === bActive) return 0;
-    return aActive ? -1 : 1;
-  };
 
   public filterByRole: NzTableFilterFn<User> = (list: string[], user: User) =>
     list.some(role => user.role.indexOf(role) !== -1);
