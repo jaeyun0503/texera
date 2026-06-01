@@ -1387,19 +1387,33 @@ export class FloatingAgentComponent implements OnInit, OnDestroy {
       return typeof uid === "number" && !stillPending.has(uid);
     });
 
+    // Build the set of uids that already have a persisted admin notification (loaded
+    // from localStorage on page init). Without this, every refresh would re-push a
+    // duplicate notification for every still-pending user.
+    const alreadyNotifiedUids = new Set<number>();
+    for (const n of this.agentService.peekByCategory("admin")) {
+      const uid = (n.meta as { uid?: number } | undefined)?.uid;
+      if (typeof uid === "number") alreadyNotifiedUids.add(uid);
+    }
+
     for (const user of pendingUnseen) {
-      if (!this.adminNotifiedThisSession.has(user.uid)) {
-        this.agentService.push({
-          category: "admin",
-          level: "warning",
-          type: "adminRequests",
-          title: `Approval needed: ${user.name}`,
-          message: this.buildAdminMessage(user),
-          action: { label: "Review user", route: [DASHBOARD_ADMIN_USER] },
-          meta: { uid: user.uid, email: user.email },
-        });
+      if (this.adminNotifiedThisSession.has(user.uid)) continue;
+      if (alreadyNotifiedUids.has(user.uid)) {
+        // Notification already in the list (from this or a prior session) — just
+        // record it locally so we don't try to push again this session.
         this.adminNotifiedThisSession.add(user.uid);
+        continue;
       }
+      this.agentService.push({
+        category: "admin",
+        level: "warning",
+        type: "adminRequests",
+        title: `Approval needed: ${user.name}`,
+        message: this.buildAdminMessage(user),
+        action: { label: "Review user", route: [DASHBOARD_ADMIN_USER] },
+        meta: { uid: user.uid, email: user.email },
+      });
+      this.adminNotifiedThisSession.add(user.uid);
     }
 
     // Drop in-session tracking for users no longer pending so a re-INACTIVE flip would
